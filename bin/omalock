@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# omalock: lock/unlock Hyprland window layout manipulation.
+#
+# Locking removes (unbinds) every keybind and mouse bind that can move,
+# resize, swap, float, group, or send a window to another workspace, using
+# the runtime `hyprctl eval "hl.unbind(...)"` API. Unlocking restores the
+# full config with `hyprctl reload`.
+
+set -euo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/omalock"
+STATE_FILE="$STATE_DIR/state"
+
+notify() {
+  command -v omarchy-notification-send >/dev/null 2>&1 &&
+    omarchy-notification-send -g "$1" "$2" || true
+}
+
+# Key combos that mutate window geometry, tiling, grouping, or placement.
+combos() {
+  cat <<'EOF'
+SUPER + mouse:272
+SUPER + mouse:273
+SUPER + T
+SUPER + J
+SUPER + P
+SUPER + O
+SUPER + L
+SUPER + G
+SUPER + ALT + G
+SUPER + Home
+SUPER + ALT + S
+SUPER + SHIFT + LEFT
+SUPER + SHIFT + RIGHT
+SUPER + SHIFT + UP
+SUPER + SHIFT + DOWN
+SUPER + ALT + LEFT
+SUPER + ALT + RIGHT
+SUPER + ALT + UP
+SUPER + ALT + DOWN
+SUPER + code:20
+SUPER + code:21
+SUPER + SHIFT + code:20
+SUPER + SHIFT + code:21
+SUPER + ALT + code:20
+SUPER + ALT + code:21
+SUPER + SHIFT + ALT + code:20
+SUPER + SHIFT + ALT + code:21
+SUPER + CTRL + code:20
+SUPER + CTRL + code:21
+SUPER + CTRL + SHIFT + code:20
+SUPER + CTRL + SHIFT + code:21
+EOF
+  # Move-to-workspace binds: SUPER + SHIFT + code:10..19 and the silent
+  # SUPER + SHIFT + ALT variants (workspaces 1..10 map to code:10..19).
+  local code
+  for code in $(seq 10 19); do
+    echo "SUPER + SHIFT + code:$code"
+    echo "SUPER + SHIFT + ALT + code:$code"
+  done
+}
+
+apply_lock() {
+  local combo
+  while IFS= read -r combo; do
+    [[ -z $combo ]] && continue
+    hyprctl eval "hl.unbind(\"$combo\")" >/dev/null 2>&1 || true
+  done < <(combos)
+}
+
+is_locked() {
+  [[ -f $STATE_FILE ]]
+}
+
+lock() {
+  mkdir -p "$STATE_DIR"
+  local ws
+  ws=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // empty' 2>/dev/null || true)
+  apply_lock
+  echo "${ws:-?}" >"$STATE_FILE"
+  notify "" "Window layout locked"
+}
+
+unlock() {
+  rm -f "$STATE_FILE"
+  hyprctl reload >/dev/null 2>&1 || true
+  notify "" "Window layout unlocked"
+}
+
+case "${1:-status}" in
+  lock) is_locked || lock ;;
+  unlock) is_locked && unlock || true ;;
+  toggle) if is_locked; then unlock; else lock; fi ;;
+  status) is_locked && echo locked || echo unlocked ;;
+  *) echo "usage: omalock {lock|unlock|toggle|status}" >&2; exit 1 ;;
+esac

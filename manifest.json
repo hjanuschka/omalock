@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "omalock",
+  "name": "Omalock",
+  "version": "0.1.0",
+  "author": "Helmut Januschka",
+  "license": "MIT",
+  "description": "Click to lock window layout: no moving, resizing, swapping, or sending windows to other workspaces until unlocked",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Omalock",
+    "description": "Lock the current window layout (blocks move/resize/swap and moving windows across workspaces)",
+    "category": "Compositor",
+    "allowMultiple": false,
+    "defaultSection": "center"
+  }
+}
