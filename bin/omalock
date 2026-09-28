@@ -73,12 +73,24 @@ is_locked() {
   [[ -f $STATE_FILE ]]
 }
 
-lock() {
+# Writes the marker through an exclusive private temp file renamed over the
+# destination, so a symlink planted at $STATE_FILE is replaced rather than
+# followed (which would truncate its target).
+write_marker() {
+  local tmp
   mkdir -p "$STATE_DIR"
+  [[ -d $STATE_DIR && ! -L $STATE_DIR ]] || return 1
+  tmp=$(mktemp "$STATE_DIR/.state.XXXXXX") || return 1
+  trap 'rm -f -- "$tmp"' RETURN
+  printf '%s\n' "$1" >"$tmp"
+  mv -fT -- "$tmp" "$STATE_FILE"
+}
+
+lock() {
   local ws
   ws=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // empty' 2>/dev/null || true)
   apply_lock
-  echo "${ws:-?}" >"$STATE_FILE"
+  write_marker "${ws:-?}"
   notify "" "Window layout locked"
 }
 
