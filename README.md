@@ -72,9 +72,7 @@ Unlocked (open padlock) vs locked (red padlock):
 ![Unlocked](screenshots/bar-unlocked.png)
 ![Locked](screenshots/bar-locked.png)
 
-On a workspace with a tiled layout, locking freezes every window in place:
-
-![Desktop with layout locked](screenshots/desktop-locked.png)
+On a workspace with a tiled layout, locking freezes every window in place.
 
 ## Notes
 
